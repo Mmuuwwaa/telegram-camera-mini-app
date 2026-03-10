@@ -84,7 +84,7 @@ function App() {
     setIsLoading(true);
     try {
       const initData = tg.initData;
-      const response = await fetch('https://telegram-camera-mini-app.vercel.app/api/upload-photo', {
+      const response = await fetch('https://telegram-camera-mini-app-lva4.vercel.app/api/upload-photo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
