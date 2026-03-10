@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/telegram-camera-mini-app/static/css/main.898512e5.css",
+    "main.js": "/telegram-camera-mini-app/static/js/main.460b8ec2.js",
+    "static/js/453.4cba254d.chunk.js": "/telegram-camera-mini-app/static/js/453.4cba254d.chunk.js",
+    "index.html": "/telegram-camera-mini-app/index.html",
+    "main.898512e5.css.map": "/telegram-camera-mini-app/static/css/main.898512e5.css.map",
+    "main.460b8ec2.js.map": "/telegram-camera-mini-app/static/js/main.460b8ec2.js.map",
+    "453.4cba254d.chunk.js.map": "/telegram-camera-mini-app/static/js/453.4cba254d.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.898512e5.css",
+    "static/js/main.460b8ec2.js"
+  ]
+}
