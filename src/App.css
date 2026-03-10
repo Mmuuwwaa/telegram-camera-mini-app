@@ -1,0 +1,133 @@
+.App {
+  text-align: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.camera-container {
+  width: 100%;
+  max-width: 500px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.video-preview {
+  width: 100%;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  background: #000;
+  aspect-ratio: 4/3;
+  object-fit: cover;
+}
+
+.photo-preview {
+  width: 100%;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  aspect-ratio: 4/3;
+  object-fit: cover;
+}
+
+.camera-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 15px;
+  align-items: center;
+}
+
+.toggle-camera-btn {
+  padding: 12px 20px;
+  background-color: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 25px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.2s;
+  width: 100%;
+  max-width: 300px;
+}
+
+.toggle-camera-btn:hover {
+  background-color: #1976D2;
+}
+
+.toggle-camera-btn:disabled {
+  background: #cccccc;
+  cursor: not-allowed;
+}
+
+.capture-btn {
+  padding: 15px 30px;
+  font-size: 18px;
+  border: none;
+  border-radius: 25px;
+  background: #4CAF50;
+  color: white;
+  cursor: pointer;
+  transition: transform 0.2s, background 0.2s;
+  margin: 0 auto;
+  width: 100%;
+  max-width: 300px;
+}
+
+.capture-btn:hover {
+  background: #45a049;
+  transform: scale(1.05);
+}
+
+.capture-btn:disabled {
+  background: #cccccc;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.button-group {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.retake-btn, .send-btn {
+  padding: 12px 24px;
+  font-size: 16px;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: transform 0.2s;
+  flex: 1;
+  max-width: 150px;
+}
+
+.retake-btn {
+  background: #f44336;
+  color: white;
+}
+
+.retake-btn:hover {
+  background: #d32f2f;
+  transform: scale(1.05);
+}
+
+.send-btn {
+  background: #2196F3;
+  color: white;
+}
+
+.send-btn:hover {
+  background: #1976D2;
+  transform: scale(1.05);
+}
+
+.send-btn:disabled, .retake-btn:disabled {
+  background: #cccccc;
+  cursor: not-allowed;
+  transform: none;
+}
