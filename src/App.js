@@ -1,83 +1,74 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import './App.css';
 
 const tg = window.Telegram?.WebApp;
-const API_BASE = process.env.REACT_APP_API_BASE || 'https://telegram-camera-mini-app-lva4.vercel.app/api';
 
 function App() {
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
-
   const [hasPhoto, setHasPhoto] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [photoData, setPhotoData] = useState(null);
-  const [facingMode, setFacingMode] = useState('environment');
-  const [cameraError, setCameraError] = useState('');
+  const [facingMode, setFacingMode] = useState('user'); // 'user' (передняя) или 'environment' (задняя)
 
-  const urlParams = useMemo(() => new URLSearchParams(window.location.search), []);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
 
-  const taskId = useMemo(() => urlParams.get('task_id') || '', [urlParams]);
-  const taskTitle = useMemo(() => decodeURIComponent(urlParams.get('task_title') || '').trim(), [urlParams]);
+  // Получаем параметры из URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const task_id = urlParams.get('task_id') || '';
 
-  const stopStream = useCallback(() => {
-    const stream = videoRef.current?.srcObject;
-    if (!stream) return;
-    stream.getTracks().forEach(track => track.stop());
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-  }, []);
-
+  // Функция запуска камеры
   const startCamera = useCallback(async () => {
-    setCameraError('');
     try {
-      stopStream();
+      // Останавливаем предыдущую камеру, если есть
+      if (videoRef.current && videoRef.current.srcObject) {
+        const tracks = videoRef.current.srcObject.getTracks();
+        tracks.forEach(track => track.stop());
+      }
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode,
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-        audio: false,
+        video: { facingMode: facingMode }
       });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
-    } catch (error) {
-      console.error('Camera error', error);
-      const text = 'Не удалось открыть камеру. Проверьте разрешение на доступ к камере.';
-      setCameraError(text);
-      tg?.showAlert(text);
+    } catch (err) {
+      console.error('Ошибка доступа к камере:', err);
+      if (tg) {
+        tg.showAlert('Не удалось получить доступ к камере.');
+      }
     }
-  }, [facingMode, stopStream]);
+  }, [facingMode]); // перезапускаем при смене facingMode
 
+  // Эффект для инициализации и очистки
   useEffect(() => {
     if (tg) {
       tg.ready();
       tg.expand();
-      tg.disableVerticalSwipes?.();
     }
     startCamera();
-    return () => stopStream();
-  }, [startCamera, stopStream]);
+
+    // Функция очистки – копируем ref в переменную, чтобы избежать предупреждения
+    const currentVideo = videoRef.current;
+    return () => {
+      if (currentVideo && currentVideo.srcObject) {
+        const tracks = currentVideo.srcObject.getTracks();
+        tracks.forEach(track => track.stop());
+      }
+    };
+  }, [startCamera]); // теперь startCamera включена в зависимости, но она мемоизирована через useCallback
 
   const toggleCamera = () => {
     setFacingMode(prev => (prev === 'user' ? 'environment' : 'user'));
   };
 
   const takePhoto = () => {
+    if (!videoRef.current || !canvasRef.current) return;
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    if (!video || !canvas || !video.videoWidth || !video.videoHeight) {
-      tg?.showAlert('Камера ещё не готова. Попробуйте через секунду.');
-      return;
-    }
-
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     const context = canvas.getContext('2d');
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const photoBase64 = canvas.toDataURL('image/jpeg', 0.85);
+    const photoBase64 = canvas.toDataURL('image/jpeg', 0.8);
     setPhotoData(photoBase64);
     setHasPhoto(true);
   };
@@ -114,9 +105,17 @@ function App() {
         }),
       });
 
-      const result = await response.json();
+      const rawText = await response.text();
+      let result = {};
+
+      try {
+        result = rawText ? JSON.parse(rawText) : {};
+      } catch {
+        result = { detail: rawText || 'Сервер вернул некорректный ответ' };
+      }
+
       if (!response.ok) {
-        throw new Error(result.detail || 'Неизвестная ошибка');
+        throw new Error(result.detail || `HTTP ${response.status}`);
       }
 
       tg?.showAlert('✅ Фото отправлено');
@@ -132,36 +131,35 @@ function App() {
   return (
     <div className="App">
       <div className="camera-container">
-        <h3>{taskTitle || 'Выполнение задачи'}</h3>
-
-        {cameraError ? <div className="error-box">{cameraError}</div> : null}
-
         {!hasPhoto ? (
           <>
-            <video ref={videoRef} autoPlay playsInline className="video-preview" muted />
+            <video ref={videoRef} autoPlay playsInline className="video-preview" />
             <div className="camera-controls">
               <button onClick={toggleCamera} className="toggle-camera-btn" disabled={isLoading}>
                 🔄 Сменить камеру
               </button>
-              <button onClick={takePhoto} className="capture-btn" disabled={isLoading || !!cameraError}>
+              <button onClick={takePhoto} className="capture-btn" disabled={isLoading}>
                 📸 Сделать фото
               </button>
             </div>
           </>
         ) : (
           <>
-            <img src={photoData} alt="preview" className="photo-preview" />
+            <img src={photoData} alt="Preview" className="photo-preview" />
             <div className="button-group">
               <button onClick={retakePhoto} className="retake-btn" disabled={isLoading}>
                 🔄 Переснять
               </button>
-              <button onClick={sendPhoto} className="send-btn" disabled={isLoading}>
+              <button 
+                onClick={sendPhoto} 
+                className="send-btn" 
+                disabled={isLoading}
+              >
                 {isLoading ? '⏳ Отправка...' : '📤 Отправить'}
               </button>
             </div>
           </>
         )}
-
         <canvas ref={canvasRef} style={{ display: 'none' }} />
       </div>
     </div>
