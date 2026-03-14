@@ -14,10 +14,10 @@ function App() {
   const [facingMode, setFacingMode] = useState('environment');
   const [cameraError, setCameraError] = useState('');
 
-  const taskId = useMemo(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get('task_id') || '';
-  }, []);
+  const urlParams = useMemo(() => new URLSearchParams(window.location.search), []);
+
+  const taskId = useMemo(() => urlParams.get('task_id') || '', [urlParams]);
+  const taskTitle = useMemo(() => decodeURIComponent(urlParams.get('task_title') || '').trim(), [urlParams]);
 
   const stopStream = useCallback(() => {
     const stream = videoRef.current?.srcObject;
@@ -132,9 +132,7 @@ function App() {
   return (
     <div className="App">
       <div className="camera-container">
-        <h3>Выполнение задачи</h3>
-        <p className="hint-text">Сделайте фото прямо сейчас и отправьте его через mini app.</p>
-        {taskId ? <p className="task-id">Задача #{taskId}</p> : null}
+        <h3>{taskTitle || 'Выполнение задачи'}</h3>
 
         {cameraError ? <div className="error-box">{cameraError}</div> : null}
 
