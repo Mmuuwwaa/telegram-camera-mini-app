@@ -55,16 +55,19 @@ function App() {
     }
   }, [urlParams]);
 
-  const showAlert = (text) => {
-    if (isTelegram) return tg?.showAlert(text);
-    if (isMax && maxWebApp?.showAlert) return maxWebApp.showAlert(text);
-    window.alert(text);
-  };
+  const showAlert = useCallback(
+    (text) => {
+      if (isTelegram) return tg?.showAlert(text);
+      if (isMax && maxWebApp?.showAlert) return maxWebApp.showAlert(text);
+      window.alert(text);
+    },
+    [isTelegram, isMax]
+  );
 
-  const closeApp = () => {
+  const closeApp = useCallback(() => {
     if (isTelegram) return tg?.close();
     if (isMax && maxWebApp?.close) return maxWebApp.close();
-  };
+  }, [isTelegram, isMax]);
 
   const stopStream = useCallback(() => {
     const stream = videoRef.current?.srcObject;
@@ -97,7 +100,7 @@ function App() {
       setCameraError(text);
       showAlert(text);
     }
-  }, [facingMode, stopStream]);
+  }, [facingMode, stopStream, showAlert]);
 
   useEffect(() => {
     try {
