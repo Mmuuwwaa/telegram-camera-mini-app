@@ -2,8 +2,27 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './App.css';
 
 const tg = window.Telegram?.WebApp;
+const maxWebApp = window.WebApp;
+
 const API_BASE =
   process.env.REACT_APP_API_BASE || 'https://telegram-camera-mini-app-lva4.vercel.app/api';
+
+function getTaskIdFromStartParam(startParam) {
+  if (!startParam) return '';
+  if (startParam.startsWith('task_')) return startParam.replace('task_', '');
+  return '';
+}
+
+function getMaxStartParam() {
+  try {
+    if (maxWebApp?.initDataUnsafe?.start_param) {
+      return String(maxWebApp.initDataUnsafe.start_param);
+    }
+  } catch {}
+
+  const urlParams = new URLSearchParams(window.location.search);
+  return urlParams.get('WebAppStartParam') || '';
+}
 
 function App() {
   const videoRef = useRef(null);
@@ -15,8 +34,18 @@ function App() {
   const [facingMode, setFacingMode] = useState('environment');
   const [cameraError, setCameraError] = useState('');
 
+  const isTelegram = !!tg;
+  const isMax = !!maxWebApp && !tg;
+
   const urlParams = useMemo(() => new URLSearchParams(window.location.search), []);
-  const taskId = useMemo(() => urlParams.get('task_id') || '', [urlParams]);
+  const maxStartParam = useMemo(() => getMaxStartParam(), []);
+
+  const taskId = useMemo(() => {
+    const fromQuery = urlParams.get('task_id') || '';
+    if (fromQuery) return fromQuery;
+    return getTaskIdFromStartParam(maxStartParam);
+  }, [urlParams, maxStartParam]);
+
   const taskTitle = useMemo(() => {
     const raw = urlParams.get('task_title') || '';
     try {
@@ -25,6 +54,17 @@ function App() {
       return raw.trim();
     }
   }, [urlParams]);
+
+  const showAlert = (text) => {
+    if (isTelegram) return tg?.showAlert(text);
+    if (isMax && maxWebApp?.showAlert) return maxWebApp.showAlert(text);
+    window.alert(text);
+  };
+
+  const closeApp = () => {
+    if (isTelegram) return tg?.close();
+    if (isMax && maxWebApp?.close) return maxWebApp.close();
+  };
 
   const stopStream = useCallback(() => {
     const stream = videoRef.current?.srcObject;
@@ -55,20 +95,26 @@ function App() {
       console.error('Camera error', error);
       const text = 'Не удалось открыть камеру. Проверьте разрешение на доступ к камере.';
       setCameraError(text);
-      tg?.showAlert(text);
+      showAlert(text);
     }
   }, [facingMode, stopStream]);
 
   useEffect(() => {
-    if (tg) {
-      tg.ready();
-      tg.expand();
-      tg.disableVerticalSwipes?.();
-    }
+    try {
+      if (isTelegram) {
+        tg.ready();
+        tg.expand();
+        tg.disableVerticalSwipes?.();
+      }
+      if (isMax) {
+        maxWebApp?.ready?.();
+        maxWebApp?.expand?.();
+      }
+    } catch {}
 
     startCamera();
     return () => stopStream();
-  }, [startCamera, stopStream]);
+  }, [isTelegram, isMax, startCamera, stopStream]);
 
   const toggleCamera = () => {
     setFacingMode((prev) => (prev === 'user' ? 'environment' : 'user'));
@@ -79,7 +125,7 @@ function App() {
     const canvas = canvasRef.current;
 
     if (!video || !canvas || !video.videoWidth || !video.videoHeight) {
-      tg?.showAlert('Камера ещё не готова. Попробуйте через секунду.');
+      showAlert('Камера ещё не готова. Попробуйте через секунду.');
       return;
     }
 
@@ -88,7 +134,7 @@ function App() {
 
     const context = canvas.getContext('2d');
     if (!context) {
-      tg?.showAlert('Не удалось подготовить фото.');
+      showAlert('Не удалось подготовить фото.');
       return;
     }
 
@@ -106,28 +152,31 @@ function App() {
 
   const sendPhoto = async () => {
     if (!taskId) {
-      tg?.showAlert('Не найден task_id. Откройте задачу из Telegram ещё раз.');
+      showAlert('Не найден task_id. Откройте задачу из бота ещё раз.');
       return;
     }
 
-    if (!tg?.initData) {
-      tg?.showAlert('Не удалось получить данные Telegram. Откройте mini app из бота.');
+    const initData = isTelegram ? tg?.initData : maxWebApp?.initData;
+    if (!initData) {
+      showAlert('Не удалось получить данные платформы. Откройте mini app из бота.');
       return;
     }
 
     if (!photoData) {
-      tg?.showAlert('Сначала сделайте фото.');
+      showAlert('Сначала сделайте фото.');
       return;
     }
+
+    const endpoint = isMax ? `${API_BASE}/upload-photo-max` : `${API_BASE}/upload-photo`;
 
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE}/upload-photo`, {
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          initData: tg.initData,
+          initData,
           photo: photoData,
           timestamp: Date.now(),
           task_id: taskId,
@@ -147,11 +196,11 @@ function App() {
         throw new Error(result.detail || `HTTP ${response.status}`);
       }
 
-      tg?.showAlert('✅ Фото отправлено');
-      tg?.close();
+      showAlert('✅ Фото отправлено');
+      closeApp();
     } catch (error) {
       console.error('Upload error', error);
-      tg?.showAlert(`❌ ${error.message || 'Ошибка отправки'}`);
+      showAlert(`❌ ${error.message || 'Ошибка отправки'}`);
     } finally {
       setIsLoading(false);
     }
